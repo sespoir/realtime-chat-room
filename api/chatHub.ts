@@ -8,19 +8,59 @@ import type {
   ServerMessage,
 } from '../shared/chat.js';
 
-const users = new Map<string, ChatUser>();
-const sockets = new Map<string, WebSocket>();
-const socketUsers = new Map<WebSocket, string>();
-const recentMessages: ChatMessage[] = [];
+type RoomState = {
+  users: Map<string, ChatUser>;
+  sockets: Map<string, WebSocket>;
+  recentMessages: ChatMessage[];
+};
+
+type SocketSession = {
+  roomId: string;
+  userId: string;
+};
+
+const rooms = new Map<string, RoomState>();
+const socketSessions = new Map<WebSocket, SocketSession>();
 const maxRecentMessages = 100;
 const maxMessageLength = 800;
+const maxRoomIdLength = 32;
 
 function normalizeNickname(value: unknown): string {
   return String(value ?? '').trim().replace(/\s+/g, ' ');
 }
 
+function normalizeRoomId(value: unknown): string {
+  return String(value ?? '').trim().replace(/\s+/g, '-');
+}
+
 function isValidNickname(nickname: string) {
   return nickname.length >= 2 && nickname.length <= 20;
+}
+
+function isValidRoomId(roomId: string) {
+  return roomId.length >= 2 && roomId.length <= maxRoomIdLength;
+}
+
+function getRoom(roomId: string): RoomState {
+  const existingRoom = rooms.get(roomId);
+  if (existingRoom) {
+    return existingRoom;
+  }
+
+  const room = {
+    users: new Map<string, ChatUser>(),
+    sockets: new Map<string, WebSocket>(),
+    recentMessages: [],
+  };
+  rooms.set(roomId, room);
+  return room;
+}
+
+function cleanupRoom(roomId: string) {
+  const room = rooms.get(roomId);
+  if (room && room.users.size === 0 && room.recentMessages.length === 0) {
+    rooms.delete(roomId);
+  }
 }
 
 function createMessage(payload: Omit<ChatMessage, 'id' | 'createdAt'>): ChatMessage {
@@ -31,10 +71,10 @@ function createMessage(payload: Omit<ChatMessage, 'id' | 'createdAt'>): ChatMess
   };
 }
 
-function rememberMessage(message: ChatMessage) {
-  recentMessages.push(message);
-  if (recentMessages.length > maxRecentMessages) {
-    recentMessages.splice(0, recentMessages.length - maxRecentMessages);
+function rememberMessage(room: RoomState, message: ChatMessage) {
+  room.recentMessages.push(message);
+  if (room.recentMessages.length > maxRecentMessages) {
+    room.recentMessages.splice(0, room.recentMessages.length - maxRecentMessages);
   }
 }
 
@@ -44,16 +84,16 @@ function safeSend(socket: WebSocket, message: ServerMessage) {
   }
 }
 
-function broadcast(message: ServerMessage) {
-  for (const socket of sockets.values()) {
+function broadcast(room: RoomState, message: ServerMessage) {
+  for (const socket of room.sockets.values()) {
     safeSend(socket, message);
   }
 }
 
-function broadcastUsers() {
-  broadcast({
+function broadcastUsers(room: RoomState) {
+  broadcast(room, {
     type: 'users',
-    users: Array.from(users.values()),
+    users: Array.from(room.users.values()),
   });
 }
 
@@ -66,29 +106,47 @@ function parseMessage(raw: WebSocket.RawData): ClientMessage | null {
 }
 
 function leave(socket: WebSocket) {
-  const userId = socketUsers.get(socket);
-  if (!userId) {
+  const session = socketSessions.get(socket);
+  if (!session) {
     return;
   }
 
-  const user = users.get(userId);
-  socketUsers.delete(socket);
-  sockets.delete(userId);
-  users.delete(userId);
+  const room = rooms.get(session.roomId);
+  if (!room) {
+    socketSessions.delete(socket);
+    return;
+  }
+
+  const user = room.users.get(session.userId);
+  socketSessions.delete(socket);
+  room.sockets.delete(session.userId);
+  room.users.delete(session.userId);
 
   if (user) {
     const message = createMessage({
+      roomId: session.roomId,
       kind: 'system',
-      text: `${user.nickname} 离开了聊天室`,
+      text: `${user.nickname} 离开了房间 ${session.roomId}`,
     });
-    rememberMessage(message);
-    broadcast({ type: 'system', message });
-    broadcastUsers();
+    rememberMessage(room, message);
+    broadcast(room, { type: 'system', message });
+    broadcastUsers(room);
   }
+
+  cleanupRoom(session.roomId);
 }
 
-function handleJoin(socket: WebSocket, nicknameValue: unknown) {
+function handleJoin(socket: WebSocket, roomIdValue: unknown, nicknameValue: unknown) {
+  const roomId = normalizeRoomId(roomIdValue);
   const nickname = normalizeNickname(nicknameValue);
+  if (!isValidRoomId(roomId)) {
+    safeSend(socket, {
+      type: 'error',
+      message: `房间号需要 2-${maxRoomIdLength} 个字符`,
+    });
+    return;
+  }
+
   if (!isValidNickname(nickname)) {
     safeSend(socket, {
       type: 'error',
@@ -99,36 +157,44 @@ function handleJoin(socket: WebSocket, nicknameValue: unknown) {
 
   leave(socket);
 
+  const room = getRoom(roomId);
   const user: ChatUser = {
     id: randomUUID(),
+    roomId,
     nickname,
     joinedAt: new Date().toISOString(),
   };
 
-  users.set(user.id, user);
-  sockets.set(user.id, socket);
-  socketUsers.set(socket, user.id);
+  room.users.set(user.id, user);
+  room.sockets.set(user.id, socket);
+  socketSessions.set(socket, {
+    roomId,
+    userId: user.id,
+  });
 
   safeSend(socket, {
     type: 'welcome',
     userId: user.id,
+    roomId,
     nickname: user.nickname,
-    users: Array.from(users.values()),
-    recentMessages,
+    users: Array.from(room.users.values()),
+    recentMessages: room.recentMessages,
   });
 
   const message = createMessage({
+    roomId,
     kind: 'system',
-    text: `${nickname} 加入了聊天室`,
+    text: `${nickname} 加入了房间 ${roomId}`,
   });
-  rememberMessage(message);
-  broadcast({ type: 'system', message });
-  broadcastUsers();
+  rememberMessage(room, message);
+  broadcast(room, { type: 'system', message });
+  broadcastUsers(room);
 }
 
 function handleChat(socket: WebSocket, textValue: unknown) {
-  const userId = socketUsers.get(socket);
-  const user = userId ? users.get(userId) : undefined;
+  const session = socketSessions.get(socket);
+  const room = session ? rooms.get(session.roomId) : undefined;
+  const user = session && room ? room.users.get(session.userId) : undefined;
   if (!user) {
     safeSend(socket, {
       type: 'error',
@@ -155,13 +221,14 @@ function handleChat(socket: WebSocket, textValue: unknown) {
   }
 
   const message = createMessage({
+    roomId: user.roomId,
     kind: 'chat',
     userId: user.id,
     nickname: user.nickname,
     text,
   });
-  rememberMessage(message);
-  broadcast({ type: 'chat', message });
+  rememberMessage(room, message);
+  broadcast(room, { type: 'chat', message });
 }
 
 export function attachChatHub(server: Server) {
@@ -182,7 +249,7 @@ export function attachChatHub(server: Server) {
       }
 
       if (message.type === 'join') {
-        handleJoin(socket, message.nickname);
+        handleJoin(socket, message.roomId, message.nickname);
         return;
       }
 

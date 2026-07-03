@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { ChatMessage } from '../../shared/chat';
 
 type MessageListProps = {
+  currentNickname: string;
   currentUserId: string | null;
   messages: ChatMessage[];
 };
@@ -13,7 +14,11 @@ function formatTime(value: string) {
   }).format(new Date(value));
 }
 
-export default function MessageList({ currentUserId, messages }: MessageListProps) {
+export default function MessageList({
+  currentNickname,
+  currentUserId,
+  messages,
+}: MessageListProps) {
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -40,7 +45,7 @@ export default function MessageList({ currentUserId, messages }: MessageListProp
           );
         }
 
-        const isMine = message.userId === currentUserId;
+        const isMine = message.userId === currentUserId || message.nickname === currentNickname;
         return (
           <article className={`message-row ${isMine ? 'mine' : ''}`} key={message.id}>
             <div className="message-meta">

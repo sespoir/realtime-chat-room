@@ -3,38 +3,57 @@ import { useEffect, useState } from 'react';
 import ChatPage from '@/pages/ChatPage';
 import EntryPage from '@/pages/EntryPage';
 
+export type ChatEntry = {
+  roomId: string;
+  nickname: string;
+};
+
+const activeEntryKey = 'chat.activeEntry';
+const lastEntryKey = 'chat.lastEntry';
+
+function readStoredEntry(key: string): ChatEntry | null {
+  try {
+    const rawEntry = window.sessionStorage.getItem(key) ?? window.localStorage.getItem(key);
+    return rawEntry ? JSON.parse(rawEntry) as ChatEntry : null;
+  } catch {
+    return null;
+  }
+}
+
 function ChatApp() {
-  const [nickname, setNickname] = useState<string | null>(() => {
-    return window.sessionStorage.getItem('chat.nickname');
-  });
+  const [entry, setEntry] = useState<ChatEntry | null>(() => readStoredEntry(activeEntryKey));
+  const [lastEntry, setLastEntry] = useState<ChatEntry | null>(() => readStoredEntry(lastEntryKey));
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (nickname) {
-      window.sessionStorage.setItem('chat.nickname', nickname);
+    if (entry) {
+      const serializedEntry = JSON.stringify(entry);
+      window.sessionStorage.setItem(activeEntryKey, serializedEntry);
+      window.localStorage.setItem(lastEntryKey, serializedEntry);
+      setLastEntry(entry);
     } else {
-      window.sessionStorage.removeItem('chat.nickname');
+      window.sessionStorage.removeItem(activeEntryKey);
     }
-  }, [nickname]);
+  }, [entry]);
 
-  function enter(nextNickname: string) {
-    setNickname(nextNickname);
+  function enter(nextEntry: ChatEntry) {
+    setEntry(nextEntry);
     navigate('/chat');
   }
 
   function leave() {
-    setNickname(null);
+    setEntry(null);
     navigate('/');
   }
 
   return (
     <Routes>
-      <Route path="/" element={<EntryPage onEnter={enter} />} />
+      <Route path="/" element={<EntryPage initialEntry={lastEntry} onEnter={enter} />} />
       <Route
         path="/chat"
         element={
-          nickname
-            ? <ChatPage nickname={nickname} onLeave={leave} />
+          entry
+            ? <ChatPage roomId={entry.roomId} nickname={entry.nickname} onLeave={leave} />
             : <Navigate to="/" replace />
         }
       />

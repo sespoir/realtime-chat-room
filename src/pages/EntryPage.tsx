@@ -1,17 +1,26 @@
 import { FormEvent, useState } from 'react';
-import { Building2, MessageCircle, Sparkles } from 'lucide-react';
+import { Building2, Hash, MessageCircle, Sparkles } from 'lucide-react';
+import type { ChatEntry } from '@/App';
 
 type EntryPageProps = {
-  onEnter: (nickname: string) => void;
+  initialEntry: ChatEntry | null;
+  onEnter: (entry: ChatEntry) => void;
 };
 
-export default function EntryPage({ onEnter }: EntryPageProps) {
-  const [nickname, setNickname] = useState('');
+export default function EntryPage({ initialEntry, onEnter }: EntryPageProps) {
+  const [roomId, setRoomId] = useState(initialEntry?.roomId ?? '');
+  const [nickname, setNickname] = useState(initialEntry?.nickname ?? '');
   const [error, setError] = useState('');
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const nextRoomId = roomId.trim().replace(/\s+/g, '-');
     const nextNickname = nickname.trim().replace(/\s+/g, ' ');
+
+    if (nextRoomId.length < 2 || nextRoomId.length > 32) {
+      setError('房间号需要 2-32 个字符');
+      return;
+    }
 
     if (nextNickname.length < 2 || nextNickname.length > 20) {
       setError('昵称需要 2-20 个字符');
@@ -19,7 +28,10 @@ export default function EntryPage({ onEnter }: EntryPageProps) {
     }
 
     setError('');
-    onEnter(nextNickname);
+    onEnter({
+      roomId: nextRoomId,
+      nickname: nextNickname,
+    });
   }
 
   return (
@@ -30,12 +42,12 @@ export default function EntryPage({ onEnter }: EntryPageProps) {
         <div className="entry-copy">
           <span className="eyebrow">
             <Sparkles size={16} />
-            公共聊天室 · 第一版
+            房间制聊天室 · 可重返
           </span>
-          <h1 id="entry-title">用一个 ID，进入同一个实时聊天现场</h1>
+          <h1 id="entry-title">输入房间号，进入只属于这组人的聊天现场</h1>
           <p>
-            先用昵称自由进入公共房间，实时看到在线成员、系统提示和群聊消息。
-            字节与阿里登录入口已预留，后续接入真实 SSO 时不会影响聊天主流程。
+            每个房间号都是一个独立聊天室。使用相同房间号和昵称重新进入时，
+            还能看到这个房间之前保留的消息记录。
           </p>
         </div>
 
@@ -44,25 +56,43 @@ export default function EntryPage({ onEnter }: EntryPageProps) {
             <MessageCircle size={28} />
             <div>
               <h2>进入聊天室</h2>
-              <p>输入一个展示 ID 即可开始聊天</p>
+              <p>输入房间号和展示 ID 即可开始聊天</p>
             </div>
+          </div>
+
+          <label className="field-label" htmlFor="roomId">
+            房间号
+          </label>
+          <div className="input-with-icon">
+            <Hash size={18} />
+            <input
+              id="roomId"
+              value={roomId}
+              onChange={(event) => setRoomId(event.target.value)}
+              placeholder="例如：team-2026"
+              maxLength={32}
+              autoComplete="off"
+            />
           </div>
 
           <label className="field-label" htmlFor="nickname">
             你的昵称
           </label>
-          <input
-            id="nickname"
-            value={nickname}
-            onChange={(event) => setNickname(event.target.value)}
-            placeholder="例如：ByteTalker"
-            maxLength={20}
-            autoComplete="nickname"
-          />
+          <div className="input-with-icon">
+            <MessageCircle size={18} />
+            <input
+              id="nickname"
+              value={nickname}
+              onChange={(event) => setNickname(event.target.value)}
+              placeholder="例如：ByteTalker"
+              maxLength={20}
+              autoComplete="nickname"
+            />
+          </div>
           {error ? <p className="form-error">{error}</p> : null}
 
           <button className="primary-button" type="submit">
-            进入公共聊天室
+            进入指定房间
           </button>
 
           <div className="provider-grid" aria-label="企业登录入口占位">
@@ -79,7 +109,7 @@ export default function EntryPage({ onEnter }: EntryPageProps) {
           </div>
 
           <p className="fine-print">
-            当前版本不做真实身份认证，昵称只用于聊天室展示。
+            当前版本不做真实身份认证；房间消息保存在服务端运行内存中，服务重启后会清空。
           </p>
         </form>
       </section>

@@ -6,11 +6,12 @@ import UserSidebar from '@/components/UserSidebar';
 import { useChatSocket } from '@/hooks/useChatSocket';
 
 type ChatPageProps = {
+  roomId: string;
   nickname: string;
   onLeave: () => void;
 };
 
-export default function ChatPage({ nickname, onLeave }: ChatPageProps) {
+export default function ChatPage({ roomId, nickname, onLeave }: ChatPageProps) {
   const {
     connectionState,
     error,
@@ -18,7 +19,7 @@ export default function ChatPage({ nickname, onLeave }: ChatPageProps) {
     sendMessage,
     userId,
     users,
-  } = useChatSocket(nickname);
+  } = useChatSocket(roomId, nickname);
 
   return (
     <main className="chat-shell">
@@ -27,9 +28,9 @@ export default function ChatPage({ nickname, onLeave }: ChatPageProps) {
           <div>
             <span className="eyebrow">
               <ShieldCheck size={15} />
-              昵称模式
+              房间 {roomId}
             </span>
-            <h1>公共聊天室</h1>
+            <h1>房间聊天室</h1>
           </div>
           <div className="header-actions">
             <ConnectionBadge state={connectionState} />
@@ -49,7 +50,11 @@ export default function ChatPage({ nickname, onLeave }: ChatPageProps) {
           <UserSidebar currentUserId={userId} users={users} />
           <section className="conversation-panel" aria-label="公共聊天消息">
             {error ? <div className="error-banner">{error}</div> : null}
-            <MessageList currentUserId={userId} messages={messages} />
+            <MessageList
+              currentNickname={nickname}
+              currentUserId={userId}
+              messages={messages}
+            />
             <MessageComposer
               disabled={connectionState !== 'connected'}
               onSend={sendMessage}

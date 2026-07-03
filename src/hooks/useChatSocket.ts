@@ -14,7 +14,7 @@ function getSocketUrl() {
   return `${protocol}//${host}/ws`;
 }
 
-export function useChatSocket(nickname: string | null) {
+export function useChatSocket(roomId: string | null, nickname: string | null) {
   const socketRef = useRef<WebSocket | null>(null);
   const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
   const [userId, setUserId] = useState<string | null>(null);
@@ -23,7 +23,7 @@ export function useChatSocket(nickname: string | null) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!nickname) {
+    if (!roomId || !nickname) {
       setConnectionState('idle');
       setUserId(null);
       setUsers([]);
@@ -39,6 +39,7 @@ export function useChatSocket(nickname: string | null) {
     socket.addEventListener('open', () => {
       socket.send(JSON.stringify({
         type: 'join',
+        roomId,
         nickname,
         authProvider: 'nickname',
       }));
@@ -88,7 +89,7 @@ export function useChatSocket(nickname: string | null) {
         socketRef.current = null;
       }
     };
-  }, [nickname]);
+  }, [roomId, nickname]);
 
   const sendMessage = useCallback((text: string) => {
     const socket = socketRef.current;

@@ -158,6 +158,24 @@ input {
   padding: 0 18px;
 }
 
+.input-with-icon {
+  align-items: center;
+  display: flex;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.input-with-icon svg {
+  color: var(--muted);
+  left: 16px;
+  pointer-events: none;
+  position: absolute;
+}
+
+.input-with-icon input {
+  padding-left: 46px;
+}
+
 textarea {
   min-height: 72px;
   padding: 16px;

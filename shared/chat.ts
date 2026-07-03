@@ -1,11 +1,13 @@
 export type ChatUser = {
   id: string;
+  roomId: string;
   nickname: string;
   joinedAt: string;
 };
 
 export type ChatMessage = {
   id: string;
+  roomId: string;
   kind: 'chat' | 'system';
   userId?: string;
   nickname?: string;
@@ -15,6 +17,7 @@ export type ChatMessage = {
 
 export type ClientJoinMessage = {
   type: 'join';
+  roomId: string;
   nickname: string;
   authProvider?: 'nickname' | 'bytedance' | 'alibaba';
 };
@@ -36,6 +39,7 @@ export type ClientMessage =
 export type ServerWelcomeMessage = {
   type: 'welcome';
   userId: string;
+  roomId: string;
   nickname: string;
   users: ChatUser[];
   recentMessages: ChatMessage[];
