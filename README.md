@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ---
 title: Realtime Chat Room
 emoji: 📊
@@ -33,16 +32,3 @@ NODE_ENV=production npm start
 本项目使用 Docker Space，服务监听端口为 `7860`。
 
 健康检查路径：`/api/health`
-=======
----
-title: Realtime Chat Room
-emoji: 📊
-colorFrom: yellow
-colorTo: indigo
-sdk: docker
-pinned: false
-license: mit
----
-
-Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
->>>>>>> hf/main
