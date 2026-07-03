@@ -1,10 +1,26 @@
 # 线上部署说明
 
-这个聊天室不是纯静态网站，它需要 Node.js 常驻服务来维持 WebSocket 连接。推荐部署到支持长期运行进程和 WebSocket 的平台，例如 Render、Railway、Fly.io、Zeabur、阿里云 ECS、火山引擎 ECS。
+这个聊天室不是纯静态网站，它需要 Node.js 常驻服务来维持 WebSocket 连接。推荐部署到支持长期运行进程和 WebSocket 的平台，例如 Hugging Face Spaces、Render、Railway、Fly.io、Zeabur、阿里云 ECS、火山引擎 ECS。
 
 不推荐直接部署到 Vercel Serverless，因为 Serverless Function 通常不适合长期 WebSocket 连接。
 
-## 方案一：Render Web Service
+## 方案一：Hugging Face Spaces Docker，优先推荐免绑卡
+
+Hugging Face Spaces 通常可以免费创建公开 Docker Space，不需要像 Render 那样先绑卡验证。适合先把聊天室跑到公网给别人访问。
+
+1. 打开 `https://huggingface.co/spaces`。
+2. 点击 `Create new Space`。
+3. 填写：
+   - Space name: `realtime-chat-room`
+   - License: 任意常见开源协议，例如 `MIT`
+   - SDK: `Docker`
+   - Visibility: `Public`
+4. 创建后进入 Space 页面，选择从 GitHub 导入或按页面提示把本仓库推送到 Hugging Face Space 的 git 地址。
+5. 本项目的 Dockerfile 默认监听 `7860`，符合 Hugging Face Spaces 的 Web 服务端口要求。
+
+部署成功后访问 Hugging Face 分配的公网地址。
+
+## 方案二：Render Web Service
 
 1. 将项目推送到 GitHub/GitLab。
 2. 在 Render 创建 `Web Service`，选择该仓库。
@@ -18,7 +34,9 @@
    - `PORT` 由 Render 自动注入，不需要手动设置
 5. 部署完成后访问 Render 分配的 HTTPS 域名。
 
-## 方案二：Railway
+Render 可能要求绑卡做防滥用验证，即使选择 Free 也可能出现这个步骤。
+
+## 方案三：Railway
 
 1. 将项目推送到 GitHub/GitLab。
 2. 在 Railway 新建项目并导入仓库。
@@ -29,13 +47,13 @@
    - `NODE_ENV=production`
 5. Railway 会自动提供公网域名，WebSocket 会走同域名的 `/ws`。
 
-## 方案三：Docker 部署到云服务器
+## 方案四：Docker 部署到云服务器
 
 服务器需要安装 Docker，并开放公网端口。
 
 ```bash
 docker build -t realtime-chat .
-docker run -d --name realtime-chat -p 3001:3001 -e NODE_ENV=production realtime-chat
+docker run -d --name realtime-chat -p 3001:7860 -e NODE_ENV=production realtime-chat
 ```
 
 访问：

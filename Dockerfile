@@ -9,7 +9,7 @@ RUN npm run build
 RUN npm prune --omit=dev
 
 ENV NODE_ENV=production
-ENV PORT=3001
-EXPOSE 3001
+ENV PORT=7860
+EXPOSE 7860
 
 CMD ["npm", "start"]
