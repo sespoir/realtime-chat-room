@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { Building2, Hash, MessageCircle, Sparkles } from 'lucide-react';
+import { Hash, MessageCircle, Sparkles } from 'lucide-react';
 import type { ChatEntry } from '@/App';
 
 type EntryPageProps = {
@@ -94,19 +94,6 @@ export default function EntryPage({ initialEntry, onEnter }: EntryPageProps) {
           <button className="primary-button" type="submit">
             进入指定房间
           </button>
-
-          <div className="provider-grid" aria-label="企业登录入口占位">
-            <button type="button" className="provider-button" title="后续可接入字节 SSO">
-              <Building2 size={18} />
-              字节登录
-              <span>预留</span>
-            </button>
-            <button type="button" className="provider-button" title="后续可接入阿里 SSO">
-              <Building2 size={18} />
-              阿里登录
-              <span>预留</span>
-            </button>
-          </div>
 
           <p className="fine-print">
             当前版本不做真实身份认证；房间消息保存在服务端运行内存中，服务重启后会清空。

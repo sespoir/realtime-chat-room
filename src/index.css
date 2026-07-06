@@ -49,8 +49,9 @@ button {
   overflow: hidden;
   position: relative;
   background:
-    radial-gradient(circle at 18% 18%, rgba(39, 224, 193, 0.2), transparent 28%),
-    radial-gradient(circle at 80% 12%, rgba(255, 180, 92, 0.22), transparent 24%),
+    radial-gradient(circle at 18% 18%, rgba(39, 224, 193, 0.24), transparent 28%),
+    radial-gradient(circle at 80% 12%, rgba(255, 180, 92, 0.26), transparent 24%),
+    radial-gradient(circle at 52% 82%, rgba(114, 137, 255, 0.14), transparent 30%),
     linear-gradient(135deg, #081018 0%, #101820 45%, #162630 100%);
 }
 
@@ -105,12 +106,25 @@ button {
 }
 
 .entry-card {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(22px);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.045)),
+    radial-gradient(circle at 18% 0%, rgba(39, 224, 193, 0.16), transparent 36%);
   border: 1px solid var(--line);
   border-radius: 32px;
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.38);
-  padding: 28px;
+  overflow: hidden;
+  padding: 30px;
   position: relative;
+}
+
+.entry-card::before {
+  background: linear-gradient(90deg, var(--cyan), var(--amber));
+  content: "";
+  height: 3px;
+  inset: 0 0 auto;
+  opacity: 0.86;
+  position: absolute;
 }
 
 .card-heading {
@@ -131,8 +145,10 @@ button {
 
 .card-heading p,
 .fine-print {
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
   color: var(--muted);
-  margin: 0;
+  margin: 18px 0 0;
+  padding-top: 14px;
 }
 
 .field-label {
@@ -196,8 +212,7 @@ textarea:focus {
 
 .primary-button,
 .ghost-button,
-.provider-button,
-.composer button {
+.send-button {
   align-items: center;
   border: 0;
   border-radius: 18px;
@@ -217,34 +232,16 @@ textarea:focus {
 }
 
 .primary-button:hover,
-.provider-button:hover,
 .ghost-button:hover,
-.composer button:hover {
+.send-button:hover,
+.sticker-button:hover {
   transform: translateY(-1px);
 }
 
-.provider-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: 1fr 1fr;
-  margin: 18px 0;
-}
-
-.provider-button,
 .ghost-button {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid var(--line);
   color: var(--text);
-}
-
-.provider-button {
-  flex-wrap: wrap;
-  min-height: 58px;
-}
-
-.provider-button span {
-  color: var(--amber);
-  font-size: 12px;
 }
 
 .orb {
@@ -451,6 +448,19 @@ textarea:focus {
   color: #06110f;
 }
 
+.message-row.sticker-message p,
+.message-row.mine.sticker-message p {
+  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  color: var(--text);
+  font-size: 44px;
+  line-height: 1;
+  padding: 14px 16px;
+}
+
 .system-message {
   align-self: center;
   background: rgba(255, 180, 92, 0.12);
@@ -477,21 +487,76 @@ textarea:focus {
 }
 
 .composer {
-  align-items: flex-end;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025)),
+    rgba(8, 16, 24, 0.5);
   border-top: 1px solid var(--line);
-  display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(0, 1fr) 112px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   padding: 18px;
 }
 
-.composer button {
+.sticker-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sticker-toolbar > span {
+  align-items: center;
+  color: var(--muted);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.sticker-list {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 2px 2px 4px;
+}
+
+.sticker-button {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  color: var(--text);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 22px;
+  height: 42px;
+  justify-content: center;
+  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+  width: 46px;
+}
+
+.sticker-button:hover {
+  background: rgba(39, 224, 193, 0.14);
+  border-color: rgba(39, 224, 193, 0.42);
+}
+
+.composer-row {
+  align-items: flex-end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 112px;
+}
+
+.send-button {
   background: var(--amber);
   color: #1f1305;
   min-height: 54px;
 }
 
-.composer button:disabled,
+.send-button:disabled,
+.sticker-button:disabled,
 .composer textarea:disabled {
   cursor: not-allowed;
   opacity: 0.48;
@@ -548,7 +613,12 @@ textarea:focus {
     max-width: 92%;
   }
 
-  .composer {
+  .composer-row {
     grid-template-columns: 1fr;
+  }
+
+  .sticker-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

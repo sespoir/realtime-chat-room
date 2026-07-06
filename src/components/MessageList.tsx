@@ -14,6 +14,10 @@ function formatTime(value: string) {
   }).format(new Date(value));
 }
 
+function isStickerMessage(text: string) {
+  return text.length <= 4 && /\p{Extended_Pictographic}/u.test(text);
+}
+
 export default function MessageList({
   currentNickname,
   currentUserId,
@@ -46,8 +50,12 @@ export default function MessageList({
         }
 
         const isMine = message.userId === currentUserId || message.nickname === currentNickname;
+        const isSticker = isStickerMessage(message.text);
         return (
-          <article className={`message-row ${isMine ? 'mine' : ''}`} key={message.id}>
+          <article
+            className={`message-row ${isMine ? 'mine' : ''} ${isSticker ? 'sticker-message' : ''}`}
+            key={message.id}
+          >
             <div className="message-meta">
               <strong>{message.nickname}</strong>
               <span>{formatTime(message.createdAt)}</span>
