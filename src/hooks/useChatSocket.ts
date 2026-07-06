@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
+  ClientGameMessage,
   ChatMessage,
   ChatUser,
+  GomokuState,
   ServerMessage,
 } from '../../shared/chat';
 
@@ -21,6 +23,7 @@ export function useChatSocket(roomId: string | null, nickname: string | null) {
   const [userId, setUserId] = useState<string | null>(null);
   const [users, setUsers] = useState<ChatUser[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [gomoku, setGomoku] = useState<GomokuState | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,6 +36,7 @@ export function useChatSocket(roomId: string | null, nickname: string | null) {
       setUserId(null);
       setUsers([]);
       setMessages([]);
+      setGomoku(null);
       return;
     }
 
@@ -79,6 +83,7 @@ export function useChatSocket(roomId: string | null, nickname: string | null) {
           setUserId(payload.userId);
           setUsers(payload.users);
           setMessages(payload.recentMessages);
+          setGomoku(payload.gomoku);
           return;
         }
 
@@ -94,6 +99,11 @@ export function useChatSocket(roomId: string | null, nickname: string | null) {
 
         if (payload.type === 'error') {
           setError(payload.message);
+          return;
+        }
+
+        if (payload.type === 'game' && payload.game === 'gomoku') {
+          setGomoku(payload.gomoku);
         }
       });
 
@@ -148,14 +158,27 @@ export function useChatSocket(roomId: string | null, nickname: string | null) {
     return true;
   }, []);
 
+  const sendGameAction = useCallback((message: ClientGameMessage) => {
+    const socket = socketRef.current;
+
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      return false;
+    }
+
+    socket.send(JSON.stringify(message));
+    return true;
+  }, []);
+
   const value = useMemo(() => ({
     connectionState,
     error,
+    gomoku,
     messages,
+    sendGameAction,
     sendMessage,
     userId,
     users,
-  }), [connectionState, error, messages, sendMessage, userId, users]);
+  }), [connectionState, error, gomoku, messages, sendGameAction, sendMessage, userId, users]);
 
   return value;
 }

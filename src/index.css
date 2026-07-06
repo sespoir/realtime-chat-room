@@ -455,7 +455,8 @@ textarea:focus {
   gap: 10px;
 }
 
-.random-actions button {
+.random-actions button,
+.rps-actions button {
   align-items: center;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -468,13 +469,28 @@ textarea:focus {
   transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
 }
 
+.rps-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.rps-actions button {
+  font-size: 13px;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 8px;
+}
+
 .random-actions button:hover,
+.rps-actions button:hover,
 .reset-board:hover,
 .gomoku-cell:hover:not(:disabled) {
   transform: translateY(-1px);
 }
 
-.random-actions button:hover {
+.random-actions button:hover,
+.rps-actions button:hover {
   background: rgba(39, 224, 193, 0.12);
   border-color: rgba(39, 224, 193, 0.32);
 }

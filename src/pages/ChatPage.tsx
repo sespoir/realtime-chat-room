@@ -16,7 +16,9 @@ export default function ChatPage({ roomId, nickname, onLeave }: ChatPageProps) {
   const {
     connectionState,
     error,
+    gomoku,
     messages,
+    sendGameAction,
     sendMessage,
     userId,
     users,
@@ -63,6 +65,8 @@ export default function ChatPage({ roomId, nickname, onLeave }: ChatPageProps) {
           </section>
           <RoomTools
             disabled={connectionState !== 'connected'}
+            gomoku={gomoku}
+            onGameAction={sendGameAction}
             onSend={sendMessage}
           />
         </div>

@@ -1,62 +1,39 @@
 import { RotateCcw, Sparkles } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import type { ClientGameMessage, GomokuState } from '../../shared/chat';
 
-type Stone = 'black' | 'white';
-type Cell = Stone | null;
+type RpsChoice = 'rock' | 'paper' | 'scissors';
 
 type RoomToolsProps = {
   disabled: boolean;
+  gomoku: GomokuState | null;
+  onGameAction: (message: ClientGameMessage) => boolean;
   onSend: (text: string) => boolean;
 };
 
 const boardSize = 15;
 const totalCells = boardSize * boardSize;
+const emptyBoard = Array(totalCells).fill(null) as GomokuState['board'];
 
-function getWinner(board: Cell[], row: number, col: number, stone: Stone) {
-  const directions = [
-    [1, 0],
-    [0, 1],
-    [1, 1],
-    [1, -1],
-  ];
-
-  return directions.some(([rowStep, colStep]) => {
-    let count = 1;
-
-    for (const direction of [-1, 1]) {
-      let nextRow = row + rowStep * direction;
-      let nextCol = col + colStep * direction;
-
-      while (
-        nextRow >= 0
-        && nextRow < boardSize
-        && nextCol >= 0
-        && nextCol < boardSize
-        && board[nextRow * boardSize + nextCol] === stone
-      ) {
-        count += 1;
-        nextRow += rowStep * direction;
-        nextCol += colStep * direction;
-      }
-    }
-
-    return count >= 5;
-  });
-}
-
-export default function RoomTools({ disabled, onSend }: RoomToolsProps) {
+export default function RoomTools({
+  disabled,
+  gomoku,
+  onGameAction,
+  onSend,
+}: RoomToolsProps) {
   const [coinResult, setCoinResult] = useState('等待抛硬币');
   const [diceResult, setDiceResult] = useState('等待掷骰子');
-  const [board, setBoard] = useState<Cell[]>(() => Array(totalCells).fill(null));
-  const [turn, setTurn] = useState<Stone>('black');
-  const [winner, setWinner] = useState<Stone | null>(null);
+  const board = gomoku?.board ?? emptyBoard;
 
   const boardStatus = useMemo(() => {
-    if (winner) {
-      return `${winner === 'black' ? '黑子' : '白子'}获胜`;
+    if (!gomoku) {
+      return '等待同步棋盘';
     }
-    return `轮到${turn === 'black' ? '黑子' : '白子'}`;
-  }, [turn, winner]);
+    if (gomoku.winner) {
+      return `${gomoku.winner === 'black' ? '黑子' : '白子'}获胜`;
+    }
+    return `轮到${gomoku.turn === 'black' ? '黑子' : '白子'}`;
+  }, [gomoku]);
 
   function flipCoin() {
     const result = Math.random() > 0.5 ? '正面' : '反面';
@@ -70,30 +47,31 @@ export default function RoomTools({ disabled, onSend }: RoomToolsProps) {
     onSend(`🎲 掷骰子：${result} 点`);
   }
 
+  function playRps(choice: RpsChoice) {
+    onGameAction({
+      type: 'game',
+      action: 'rps_play',
+      choice,
+    });
+  }
+
   function placeStone(index: number) {
-    if (board[index] || winner) {
+    if (disabled || board[index] || gomoku?.winner) {
       return;
     }
 
-    const row = Math.floor(index / boardSize);
-    const col = index % boardSize;
-    const nextBoard = [...board];
-    nextBoard[index] = turn;
-    setBoard(nextBoard);
-
-    if (getWinner(nextBoard, row, col, turn)) {
-      setWinner(turn);
-      onSend(`⚫⚪ 五子棋：${turn === 'black' ? '黑子' : '白子'}获胜`);
-      return;
-    }
-
-    setTurn(turn === 'black' ? 'white' : 'black');
+    onGameAction({
+      type: 'game',
+      action: 'gomoku_place',
+      index,
+    });
   }
 
   function resetBoard() {
-    setBoard(Array(totalCells).fill(null));
-    setTurn('black');
-    setWinner(null);
+    onGameAction({
+      type: 'game',
+      action: 'gomoku_reset',
+    });
   }
 
   return (
@@ -118,6 +96,21 @@ export default function RoomTools({ disabled, onSend }: RoomToolsProps) {
         </div>
       </section>
 
+      <section className="tool-card">
+        <div className="tool-heading">
+          <Sparkles size={17} />
+          <div>
+            <h2>石头剪刀布</h2>
+            <p>和系统快速来一局</p>
+          </div>
+        </div>
+        <div className="rps-actions">
+          <button type="button" disabled={disabled} onClick={() => playRps('rock')}>✊ 石头</button>
+          <button type="button" disabled={disabled} onClick={() => playRps('scissors')}>✌️ 剪刀</button>
+          <button type="button" disabled={disabled} onClick={() => playRps('paper')}>✋ 布</button>
+        </div>
+      </section>
+
       <section className="tool-card gomoku-card">
         <div className="tool-heading compact">
           <div>
@@ -128,12 +121,12 @@ export default function RoomTools({ disabled, onSend }: RoomToolsProps) {
             <RotateCcw size={15} />
           </button>
         </div>
-        <div className="gomoku-board" role="grid" aria-label="本地五子棋棋盘">
+        <div className="gomoku-board" role="grid" aria-label="同步五子棋棋盘">
           {board.map((cell, index) => (
             <button
               aria-label={`第 ${index + 1} 格`}
               className={`gomoku-cell ${cell ?? ''}`}
-              disabled={Boolean(cell) || Boolean(winner)}
+              disabled={disabled || Boolean(cell) || Boolean(gomoku?.winner)}
               key={index}
               onClick={() => placeStone(index)}
               type="button"
@@ -142,7 +135,7 @@ export default function RoomTools({ disabled, onSend }: RoomToolsProps) {
             </button>
           ))}
         </div>
-        <p className="tool-note">本局棋盘仅在当前设备显示，聊天会广播胜负结果。</p>
+        <p className="tool-note">棋盘现在会同步到同房间所有在线用户，胜负结果也会广播到聊天。</p>
       </section>
     </aside>
   );

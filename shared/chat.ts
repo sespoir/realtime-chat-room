@@ -15,6 +15,17 @@ export type ChatMessage = {
   createdAt: string;
 };
 
+export type GomokuStone = 'black' | 'white';
+
+export type GomokuCell = GomokuStone | null;
+
+export type GomokuState = {
+  board: GomokuCell[];
+  turn: GomokuStone;
+  winner: GomokuStone | null;
+  updatedAt: string;
+};
+
 export type ClientJoinMessage = {
   type: 'join';
   roomId: string;
@@ -31,10 +42,27 @@ export type ClientLeaveMessage = {
   type: 'leave';
 };
 
+export type ClientGameMessage =
+  | {
+      type: 'game';
+      action: 'gomoku_place';
+      index: number;
+    }
+  | {
+      type: 'game';
+      action: 'gomoku_reset';
+    }
+  | {
+      type: 'game';
+      action: 'rps_play';
+      choice: 'rock' | 'paper' | 'scissors';
+    };
+
 export type ClientMessage =
   | ClientJoinMessage
   | ClientChatMessage
-  | ClientLeaveMessage;
+  | ClientLeaveMessage
+  | ClientGameMessage;
 
 export type ServerWelcomeMessage = {
   type: 'welcome';
@@ -43,6 +71,7 @@ export type ServerWelcomeMessage = {
   nickname: string;
   users: ChatUser[];
   recentMessages: ChatMessage[];
+  gomoku: GomokuState;
 };
 
 export type ServerChatMessage = {
@@ -65,9 +94,16 @@ export type ServerErrorMessage = {
   message: string;
 };
 
+export type ServerGameMessage = {
+  type: 'game';
+  game: 'gomoku';
+  gomoku: GomokuState;
+};
+
 export type ServerMessage =
   | ServerWelcomeMessage
   | ServerChatMessage
   | ServerSystemMessage
   | ServerUsersMessage
-  | ServerErrorMessage;
+  | ServerErrorMessage
+  | ServerGameMessage;
