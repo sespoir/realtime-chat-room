@@ -2,6 +2,7 @@ import { LogOut, ShieldCheck } from 'lucide-react';
 import ConnectionBadge from '@/components/ConnectionBadge';
 import MessageComposer from '@/components/MessageComposer';
 import MessageList from '@/components/MessageList';
+import RoomTools from '@/components/RoomTools';
 import UserSidebar from '@/components/UserSidebar';
 import { useChatSocket } from '@/hooks/useChatSocket';
 
@@ -60,6 +61,10 @@ export default function ChatPage({ roomId, nickname, onLeave }: ChatPageProps) {
               onSend={sendMessage}
             />
           </section>
+          <RoomTools
+            disabled={connectionState !== 'connected'}
+            onSend={sendMessage}
+          />
         </div>
       </section>
     </main>

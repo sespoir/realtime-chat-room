@@ -143,7 +143,11 @@ button {
   margin: 0;
 }
 
-.card-heading p,
+.card-heading p {
+  color: var(--muted);
+  margin: 0;
+}
+
 .fine-print {
   border-top: 1px solid rgba(255, 255, 255, 0.09);
   color: var(--muted);
@@ -279,7 +283,8 @@ textarea:focus {
 .chat-header,
 .chat-layout,
 .conversation-panel,
-.user-sidebar {
+.user-sidebar,
+.room-tools {
   border: 1px solid var(--line);
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.24);
 }
@@ -335,7 +340,7 @@ textarea:focus {
   border-radius: 0 0 28px 28px;
   display: grid;
   flex: 1;
-  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-columns: 260px minmax(0, 1fr) 320px;
   min-height: 0;
 }
 
@@ -396,6 +401,150 @@ textarea:focus {
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+.room-tools {
+  background: var(--panel-strong);
+  border-width: 0 0 0 1px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px;
+}
+
+.tool-card {
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035)),
+    rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  padding: 16px;
+}
+
+.tool-heading {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.tool-heading.compact {
+  justify-content: space-between;
+}
+
+.tool-heading svg {
+  color: var(--amber);
+}
+
+.tool-heading h2 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.tool-heading p,
+.tool-note {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 2px 0 0;
+}
+
+.random-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.random-actions button {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  color: var(--text);
+  display: flex;
+  justify-content: space-between;
+  min-height: 50px;
+  padding: 0 13px;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.random-actions button:hover,
+.reset-board:hover,
+.gomoku-cell:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.random-actions button:hover {
+  background: rgba(39, 224, 193, 0.12);
+  border-color: rgba(39, 224, 193, 0.32);
+}
+
+.random-actions strong {
+  color: var(--cyan);
+  font-size: 12px;
+}
+
+.reset-board {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  color: var(--text);
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  transition: transform 160ms ease, background 160ms ease;
+  width: 34px;
+}
+
+.gomoku-board {
+  aspect-ratio: 1;
+  background:
+    linear-gradient(90deg, rgba(16, 24, 32, 0.44) 1px, transparent 1px),
+    linear-gradient(rgba(16, 24, 32, 0.44) 1px, transparent 1px),
+    linear-gradient(135deg, #e7bc73, #b47a39);
+  background-size: calc(100% / 15) calc(100% / 15);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 16px;
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(15, 1fr);
+  margin-top: 12px;
+  overflow: hidden;
+  padding: 6px;
+}
+
+.gomoku-cell {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  justify-content: center;
+  min-width: 0;
+  padding: 0;
+}
+
+.gomoku-cell span {
+  border-radius: 999px;
+  display: block;
+  height: 72%;
+  width: 72%;
+}
+
+.gomoku-cell.black span {
+  background: radial-gradient(circle at 30% 26%, #777, #050505 62%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+.gomoku-cell.white span {
+  background: radial-gradient(circle at 32% 28%, #fff, #d9d9d9 68%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.tool-note {
+  line-height: 1.45;
+  margin-top: 10px;
 }
 
 .error-banner {
@@ -596,10 +745,20 @@ textarea:focus {
   .chat-layout {
     border-radius: 0;
     grid-template-columns: 1fr;
+    overflow-y: auto;
   }
 
   .user-sidebar {
     display: none;
+  }
+
+  .room-tools {
+    border-width: 1px 0 0;
+    overflow: visible;
+  }
+
+  .gomoku-board {
+    max-width: 320px;
   }
 
   .mobile-users {

@@ -7,6 +7,7 @@ import type {
   ClientMessage,
   ServerMessage,
 } from '../shared/chat.js';
+import { loadChatHistory, saveChatHistory } from './chatStore.js';
 
 type RoomState = {
   users: Map<string, ChatUser>;
@@ -19,6 +20,7 @@ type SocketSession = {
   userId: string;
 };
 
+const persistedMessages = loadChatHistory();
 const rooms = new Map<string, RoomState>();
 const socketSessions = new Map<WebSocket, SocketSession>();
 const maxRecentMessages = 100;
@@ -50,7 +52,7 @@ function getRoom(roomId: string): RoomState {
   const room = {
     users: new Map<string, ChatUser>(),
     sockets: new Map<string, WebSocket>(),
-    recentMessages: [],
+    recentMessages: persistedMessages[roomId] ?? [],
   };
   rooms.set(roomId, room);
   return room;
@@ -76,6 +78,8 @@ function rememberMessage(room: RoomState, message: ChatMessage) {
   if (room.recentMessages.length > maxRecentMessages) {
     room.recentMessages.splice(0, room.recentMessages.length - maxRecentMessages);
   }
+  persistedMessages[message.roomId] = room.recentMessages;
+  saveChatHistory(persistedMessages);
 }
 
 function safeSend(socket: WebSocket, message: ServerMessage) {

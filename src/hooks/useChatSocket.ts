@@ -16,6 +16,7 @@ function getSocketUrl() {
 
 export function useChatSocket(roomId: string | null, nickname: string | null) {
   const socketRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<number | null>(null);
   const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
   const [userId, setUserId] = useState<string | null>(null);
   const [users, setUsers] = useState<ChatUser[]>([]);
@@ -24,6 +25,10 @@ export function useChatSocket(roomId: string | null, nickname: string | null) {
 
   useEffect(() => {
     if (!roomId || !nickname) {
+      if (reconnectTimerRef.current) {
+        window.clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       setConnectionState('idle');
       setUserId(null);
       setUsers([]);
@@ -31,60 +36,97 @@ export function useChatSocket(roomId: string | null, nickname: string | null) {
       return;
     }
 
-    const socket = new WebSocket(getSocketUrl());
-    socketRef.current = socket;
-    setConnectionState('connecting');
-    setError(null);
+    let disposed = false;
+    let reconnectAttempt = 0;
 
-    socket.addEventListener('open', () => {
-      socket.send(JSON.stringify({
-        type: 'join',
-        roomId,
-        nickname,
-        authProvider: 'nickname',
-      }));
-    });
-
-    socket.addEventListener('message', (event) => {
-      const payload = JSON.parse(event.data) as ServerMessage;
-
-      if (payload.type === 'welcome') {
-        setConnectionState('connected');
-        setUserId(payload.userId);
-        setUsers(payload.users);
-        setMessages(payload.recentMessages);
+    function scheduleReconnect() {
+      if (disposed) {
         return;
       }
 
-      if (payload.type === 'users') {
-        setUsers(payload.users);
-        return;
-      }
+      const delay = Math.min(1000 * 2 ** reconnectAttempt, 8000);
+      reconnectAttempt += 1;
+      setConnectionState('connecting');
+      setError(`连接已断开，正在自动重连...`);
 
-      if (payload.type === 'chat' || payload.type === 'system') {
-        setMessages((current) => [...current, payload.message]);
-        return;
-      }
+      reconnectTimerRef.current = window.setTimeout(() => {
+        reconnectTimerRef.current = null;
+        connect();
+      }, delay);
+    }
 
-      if (payload.type === 'error') {
-        setError(payload.message);
-      }
-    });
+    function connect() {
+      const socket = new WebSocket(getSocketUrl());
+      socketRef.current = socket;
+      setConnectionState('connecting');
 
-    socket.addEventListener('close', () => {
-      setConnectionState('disconnected');
-    });
+      socket.addEventListener('open', () => {
+        socket.send(JSON.stringify({
+          type: 'join',
+          roomId,
+          nickname,
+          authProvider: 'nickname',
+        }));
+      });
 
-    socket.addEventListener('error', () => {
-      setError('连接聊天室失败，请检查服务是否启动');
-      setConnectionState('disconnected');
-    });
+      socket.addEventListener('message', (event) => {
+        const payload = JSON.parse(event.data) as ServerMessage;
+
+        if (payload.type === 'welcome') {
+          reconnectAttempt = 0;
+          setConnectionState('connected');
+          setError(null);
+          setUserId(payload.userId);
+          setUsers(payload.users);
+          setMessages(payload.recentMessages);
+          return;
+        }
+
+        if (payload.type === 'users') {
+          setUsers(payload.users);
+          return;
+        }
+
+        if (payload.type === 'chat' || payload.type === 'system') {
+          setMessages((current) => [...current, payload.message]);
+          return;
+        }
+
+        if (payload.type === 'error') {
+          setError(payload.message);
+        }
+      });
+
+      socket.addEventListener('close', () => {
+        if (socketRef.current === socket) {
+          socketRef.current = null;
+        }
+        if (!disposed) {
+          scheduleReconnect();
+        }
+      });
+
+      socket.addEventListener('error', () => {
+        if (!disposed) {
+          setError('连接聊天室失败，正在自动重试');
+          setConnectionState('disconnected');
+        }
+      });
+    }
+
+    connect();
 
     return () => {
-      if (socket.readyState === WebSocket.OPEN) {
+      disposed = true;
+      if (reconnectTimerRef.current) {
+        window.clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      const socket = socketRef.current;
+      if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: 'leave' }));
       }
-      socket.close();
+      socket?.close();
       if (socketRef.current === socket) {
         socketRef.current = null;
       }
