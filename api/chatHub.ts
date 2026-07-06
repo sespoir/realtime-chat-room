@@ -7,15 +7,24 @@ import type {
   ClientMessage,
   GomokuState,
   GomokuStone,
+  RpsChoice,
   ServerMessage,
 } from '../shared/chat.js';
 import { loadChatHistory, saveChatHistory } from './chatStore.js';
+
+type RpsPending = {
+  userId: string;
+  nickname: string;
+  choice: RpsChoice;
+  createdAt: string;
+};
 
 type RoomState = {
   users: Map<string, ChatUser>;
   sockets: Map<string, WebSocket>;
   recentMessages: ChatMessage[];
   gomoku: GomokuState;
+  rpsStack: RpsPending[];
 };
 
 type SocketSession = {
@@ -35,6 +44,7 @@ const gomokuTotalCells = gomokuBoardSize * gomokuBoardSize;
 function createGomokuState(): GomokuState {
   return {
     board: Array(gomokuTotalCells).fill(null),
+    players: {},
     turn: 'black',
     winner: null,
     updatedAt: new Date().toISOString(),
@@ -68,6 +78,7 @@ function getRoom(roomId: string): RoomState {
     sockets: new Map<string, WebSocket>(),
     recentMessages: persistedMessages[roomId] ?? [],
     gomoku: createGomokuState(),
+    rpsStack: [],
   };
   rooms.set(roomId, room);
   return room;
@@ -118,6 +129,16 @@ function getGomokuWinner(board: GomokuState['board'], row: number, col: number, 
 
     return count >= 5;
   });
+}
+
+function getAssignedGomokuStone(gomoku: GomokuState, nickname: string): GomokuStone | null {
+  if (gomoku.players.black === nickname) {
+    return 'black';
+  }
+  if (gomoku.players.white === nickname) {
+    return 'white';
+  }
+  return null;
 }
 
 function rememberMessage(room: RoomState, message: ChatMessage) {
@@ -312,11 +333,35 @@ function handleGomokuPlace(socket: WebSocket, indexValue: unknown) {
   const col = index % gomokuBoardSize;
   const nextBoard = [...room.gomoku.board];
   const stone = room.gomoku.turn;
+  const assignedStone = getAssignedGomokuStone(room.gomoku, user.nickname);
+  const currentStoneOwner = room.gomoku.players[stone];
+
+  if (assignedStone && assignedStone !== stone) {
+    safeSend(socket, {
+      type: 'error',
+      message: `你已经是${assignedStone === 'black' ? '黑子' : '白子'}，不能替另一方落子`,
+    });
+    return;
+  }
+
+  if (currentStoneOwner && currentStoneOwner !== user.nickname) {
+    safeSend(socket, {
+      type: 'error',
+      message: `现在轮到${currentStoneOwner}的${stone === 'black' ? '黑子' : '白子'}`,
+    });
+    return;
+  }
+
+  const players = {
+    ...room.gomoku.players,
+    [stone]: currentStoneOwner ?? user.nickname,
+  };
   nextBoard[index] = stone;
 
   const winner = getGomokuWinner(nextBoard, row, col, stone) ? stone : null;
   room.gomoku = {
     board: nextBoard,
+    players,
     turn: winner ? stone : stone === 'black' ? 'white' : 'black',
     winner,
     updatedAt: new Date().toISOString(),
@@ -378,21 +423,44 @@ function handleRpsPlay(socket: WebSocket, choiceValue: unknown) {
     scissors: '剪刀',
   };
   const userChoice = choiceValue as typeof choices[number];
-  const systemChoice = choices[Math.floor(Math.random() * choices.length)];
-  const result = userChoice === systemChoice
+  const existingOwnIndex = room.rpsStack.findIndex((pending) => pending.nickname === user.nickname);
+  if (existingOwnIndex >= 0) {
+    room.rpsStack.splice(existingOwnIndex, 1);
+  }
+
+  const opponent = room.rpsStack.pop();
+  if (!opponent) {
+    room.rpsStack.push({
+      userId: user.id,
+      nickname: user.nickname,
+      choice: userChoice,
+      createdAt: new Date().toISOString(),
+    });
+
+    const waitingMessage = createMessage({
+      roomId: session.roomId,
+      kind: 'system',
+      text: `✊✌️✋ ${user.nickname} 已出拳，等待另一位玩家`,
+    });
+    rememberMessage(room, waitingMessage);
+    broadcast(room, { type: 'system', message: waitingMessage });
+    return;
+  }
+
+  const result = userChoice === opponent.choice
     ? '平局'
-    : (userChoice === 'rock' && systemChoice === 'scissors')
-      || (userChoice === 'paper' && systemChoice === 'rock')
-      || (userChoice === 'scissors' && systemChoice === 'paper')
-        ? '你赢了'
-        : '你输了';
+    : (userChoice === 'rock' && opponent.choice === 'scissors')
+      || (userChoice === 'paper' && opponent.choice === 'rock')
+      || (userChoice === 'scissors' && opponent.choice === 'paper')
+        ? `${user.nickname} 赢了`
+        : `${opponent.nickname} 赢了`;
 
   const message = createMessage({
     roomId: session.roomId,
     kind: 'chat',
     userId: user.id,
     nickname: user.nickname,
-    text: `✊✌️✋ 石头剪刀布：${labels[userChoice]} vs ${labels[systemChoice]}，${result}`,
+    text: `✊✌️✋ 石头剪刀布：${opponent.nickname} 出 ${labels[opponent.choice]}，${user.nickname} 出 ${labels[userChoice]}，${result}`,
   });
   rememberMessage(room, message);
   broadcast(room, { type: 'chat', message });

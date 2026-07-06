@@ -5,6 +5,7 @@ import type { ClientGameMessage, GomokuState } from '../../shared/chat';
 type RpsChoice = 'rock' | 'paper' | 'scissors';
 
 type RoomToolsProps = {
+  currentNickname: string;
   disabled: boolean;
   gomoku: GomokuState | null;
   onGameAction: (message: ClientGameMessage) => boolean;
@@ -16,6 +17,7 @@ const totalCells = boardSize * boardSize;
 const emptyBoard = Array(totalCells).fill(null) as GomokuState['board'];
 
 export default function RoomTools({
+  currentNickname,
   disabled,
   gomoku,
   onGameAction,
@@ -24,6 +26,11 @@ export default function RoomTools({
   const [coinResult, setCoinResult] = useState('等待抛硬币');
   const [diceResult, setDiceResult] = useState('等待掷骰子');
   const board = gomoku?.board ?? emptyBoard;
+  const myStone = gomoku?.players.black === currentNickname
+    ? '黑子'
+    : gomoku?.players.white === currentNickname
+      ? '白子'
+      : '尚未分配';
 
   const boardStatus = useMemo(() => {
     if (!gomoku) {
@@ -101,7 +108,7 @@ export default function RoomTools({
           <Sparkles size={17} />
           <div>
             <h2>石头剪刀布</h2>
-            <p>和系统快速来一局</p>
+            <p>先出拳入栈，等另一位玩家出拳后结算</p>
           </div>
         </div>
         <div className="rps-actions">
@@ -135,7 +142,11 @@ export default function RoomTools({
             </button>
           ))}
         </div>
-        <p className="tool-note">棋盘现在会同步到同房间所有在线用户，胜负结果也会广播到聊天。</p>
+        <div className="gomoku-players">
+          <span>黑：{gomoku?.players.black ?? '待认领'}</span>
+          <span>白：{gomoku?.players.white ?? '待认领'}</span>
+        </div>
+        <p className="tool-note">你的颜色：{myStone}。第一次落对应颜色会自动认领，之后不能串色。</p>
       </section>
     </aside>
   );

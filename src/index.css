@@ -558,6 +558,25 @@ textarea:focus {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 
+.gomoku-players {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 12px;
+}
+
+.gomoku-players span {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  overflow: hidden;
+  padding: 8px 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .tool-note {
   line-height: 1.45;
   margin-top: 10px;

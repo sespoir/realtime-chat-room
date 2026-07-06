@@ -64,6 +64,7 @@ export default function ChatPage({ roomId, nickname, onLeave }: ChatPageProps) {
             />
           </section>
           <RoomTools
+            currentNickname={nickname}
             disabled={connectionState !== 'connected'}
             gomoku={gomoku}
             onGameAction={sendGameAction}

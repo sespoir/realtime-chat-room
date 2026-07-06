@@ -19,12 +19,20 @@ export type GomokuStone = 'black' | 'white';
 
 export type GomokuCell = GomokuStone | null;
 
+export type GomokuPlayers = {
+  black?: string;
+  white?: string;
+};
+
 export type GomokuState = {
   board: GomokuCell[];
+  players: GomokuPlayers;
   turn: GomokuStone;
   winner: GomokuStone | null;
   updatedAt: string;
 };
+
+export type RpsChoice = 'rock' | 'paper' | 'scissors';
 
 export type ClientJoinMessage = {
   type: 'join';
@@ -55,7 +63,7 @@ export type ClientGameMessage =
   | {
       type: 'game';
       action: 'rps_play';
-      choice: 'rock' | 'paper' | 'scissors';
+      choice: RpsChoice;
     };
 
 export type ClientMessage =
