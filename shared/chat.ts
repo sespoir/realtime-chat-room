@@ -24,8 +24,15 @@ export type GomokuPlayers = {
   white?: string;
 };
 
+export type GomokuMove = {
+  index: number;
+  nickname: string;
+  stone: GomokuStone;
+};
+
 export type GomokuState = {
   board: GomokuCell[];
+  moves: GomokuMove[];
   players: GomokuPlayers;
   turn: GomokuStone;
   winner: GomokuStone | null;
@@ -59,6 +66,10 @@ export type ClientGameMessage =
   | {
       type: 'game';
       action: 'gomoku_reset';
+    }
+  | {
+      type: 'game';
+      action: 'gomoku_undo';
     }
   | {
       type: 'game';

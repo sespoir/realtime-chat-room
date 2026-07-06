@@ -1,4 +1,4 @@
-import { RotateCcw, Sparkles } from 'lucide-react';
+import { RotateCcw, Sparkles, Undo2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { ClientGameMessage, GomokuState } from '../../shared/chat';
 
@@ -81,6 +81,13 @@ export default function RoomTools({
     });
   }
 
+  function undoMove() {
+    onGameAction({
+      type: 'game',
+      action: 'gomoku_undo',
+    });
+  }
+
   return (
     <aside className="room-tools" aria-label="房间工具">
       <section className="tool-card">
@@ -124,9 +131,15 @@ export default function RoomTools({
             <h2>五子棋</h2>
             <p>{boardStatus}</p>
           </div>
-          <button className="reset-board" type="button" onClick={resetBoard}>
-            <RotateCcw size={15} />
-          </button>
+          <div className="gomoku-actions">
+            <button className="board-action" disabled={disabled} type="button" onClick={undoMove}>
+              <Undo2 size={14} />
+              悔棋
+            </button>
+            <button className="board-action icon-only" disabled={disabled} type="button" onClick={resetBoard} aria-label="重置棋盘">
+              <RotateCcw size={15} />
+            </button>
+          </div>
         </div>
         <div className="gomoku-board" role="grid" aria-label="同步五子棋棋盘">
           {board.map((cell, index) => (

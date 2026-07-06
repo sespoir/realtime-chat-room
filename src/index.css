@@ -484,7 +484,7 @@ textarea:focus {
 
 .random-actions button:hover,
 .rps-actions button:hover,
-.reset-board:hover,
+.board-action:hover,
 .gomoku-cell:hover:not(:disabled) {
   transform: translateY(-1px);
 }
@@ -500,16 +500,28 @@ textarea:focus {
   font-size: 12px;
 }
 
-.reset-board {
+.gomoku-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.board-action {
   align-items: center;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
   color: var(--text);
   display: inline-flex;
+  gap: 5px;
   height: 34px;
   justify-content: center;
+  padding: 0 10px;
   transition: transform 160ms ease, background 160ms ease;
+}
+
+.board-action.icon-only {
+  padding: 0;
   width: 34px;
 }
 

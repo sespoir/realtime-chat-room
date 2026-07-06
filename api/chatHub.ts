@@ -44,6 +44,7 @@ const gomokuTotalCells = gomokuBoardSize * gomokuBoardSize;
 function createGomokuState(): GomokuState {
   return {
     board: Array(gomokuTotalCells).fill(null),
+    moves: [],
     players: {},
     turn: 'black',
     winner: null,
@@ -139,6 +140,15 @@ function getAssignedGomokuStone(gomoku: GomokuState, nickname: string): GomokuSt
     return 'white';
   }
   return null;
+}
+
+function getGomokuPlayersFromMoves(moves: GomokuState['moves']) {
+  return moves.reduce<GomokuState['players']>((players, move) => {
+    if (!players[move.stone]) {
+      players[move.stone] = move.nickname;
+    }
+    return players;
+  }, {});
 }
 
 function rememberMessage(room: RoomState, message: ChatMessage) {
@@ -361,6 +371,14 @@ function handleGomokuPlace(socket: WebSocket, indexValue: unknown) {
   const winner = getGomokuWinner(nextBoard, row, col, stone) ? stone : null;
   room.gomoku = {
     board: nextBoard,
+    moves: [
+      ...room.gomoku.moves,
+      {
+        index,
+        nickname: user.nickname,
+        stone,
+      },
+    ],
     players,
     turn: winner ? stone : stone === 'black' ? 'white' : 'black',
     winner,
@@ -408,6 +426,58 @@ function handleGomokuReset(socket: WebSocket) {
   broadcast(room, { type: 'system', message });
 }
 
+function handleGomokuUndo(socket: WebSocket) {
+  const session = socketSessions.get(socket);
+  const room = session ? rooms.get(session.roomId) : undefined;
+  const user = session && room ? room.users.get(session.userId) : undefined;
+  if (!session || !room || !user) {
+    return;
+  }
+
+  const lastMove = room.gomoku.moves.at(-1);
+  if (!lastMove) {
+    safeSend(socket, {
+      type: 'error',
+      message: '当前没有可以悔的棋',
+    });
+    return;
+  }
+
+  if (lastMove.nickname !== user.nickname) {
+    safeSend(socket, {
+      type: 'error',
+      message: `只能等待 ${lastMove.nickname} 悔自己的上一步棋`,
+    });
+    return;
+  }
+
+  const nextMoves = room.gomoku.moves.slice(0, -1);
+  const nextBoard = [...room.gomoku.board];
+  nextBoard[lastMove.index] = null;
+  room.gomoku = {
+    board: nextBoard,
+    moves: nextMoves,
+    players: getGomokuPlayersFromMoves(nextMoves),
+    turn: lastMove.stone,
+    winner: null,
+    updatedAt: new Date().toISOString(),
+  };
+
+  broadcast(room, {
+    type: 'game',
+    game: 'gomoku',
+    gomoku: room.gomoku,
+  });
+
+  const message = createMessage({
+    roomId: session.roomId,
+    kind: 'system',
+    text: `↩️ ${user.nickname} 悔了一步五子棋`,
+  });
+  rememberMessage(room, message);
+  broadcast(room, { type: 'system', message });
+}
+
 function handleRpsPlay(socket: WebSocket, choiceValue: unknown) {
   const session = socketSessions.get(socket);
   const room = session ? rooms.get(session.roomId) : undefined;
@@ -440,10 +510,9 @@ function handleRpsPlay(socket: WebSocket, choiceValue: unknown) {
     const waitingMessage = createMessage({
       roomId: session.roomId,
       kind: 'system',
-      text: `✊✌️✋ ${user.nickname} 已出拳，等待另一位玩家`,
+      text: '✊✌️✋ 你已出拳，等待另一位玩家',
     });
-    rememberMessage(room, waitingMessage);
-    broadcast(room, { type: 'system', message: waitingMessage });
+    safeSend(socket, { type: 'system', message: waitingMessage });
     return;
   }
 
@@ -478,6 +547,11 @@ function handleGame(socket: WebSocket, message: ClientMessage) {
 
   if (message.action === 'gomoku_reset') {
     handleGomokuReset(socket);
+    return;
+  }
+
+  if (message.action === 'gomoku_undo') {
+    handleGomokuUndo(socket);
     return;
   }
 
